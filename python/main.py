@@ -63,7 +63,7 @@ class AntennaArray():
     def __init__(self, tx_radio: list, rx_radio: list):
         self.tx_radio = tx_radio
         self.rx_radio = rx_radio
-        self.light_speed = 29979.2458
+        self.light_speed = 299792458
 
     def sim(self, t_start: float, t_sec: float):
         """Generates output for each receiver"""
@@ -79,10 +79,10 @@ class AntennaArray():
 
 def main():
     """The main execution"""
-    sps = 35E3
-    tx_pos = StateVector([1000,3000], [0,0])
-    rx_pos = [StateVector([i*1000,0], [0,0]) for i in range(3)]
-    rtx = [RadioTx(10, tx_pos, sps, 1e3)]
+    sps = 2.5E6
+    tx_pos = StateVector([200000,200000], [0,0])
+    rx_pos = [StateVector([(i-1)*1500,0], [0,0]) for i in range(3)]
+    rtx = [RadioTx(10, tx_pos, sps, 1e5)]
     rrx = [RadioRx(10, rxp, sps, f"tcp://*:6000{i}", b'') for i, rxp in enumerate(rx_pos)]
     antena_array = AntennaArray(rtx, rrx)
     now = time.time()

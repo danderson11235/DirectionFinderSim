@@ -1,0 +1,496 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: directionFinding
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Not titled yet
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: d
+  id: variable
+  parameters:
+    comment: ''
+    value: '.5'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 144.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: 2.5e6
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 12]
+    rotation: 0
+    state: enabled
+- name: vector_size
+  id: variable
+  parameters:
+    comment: ''
+    value: '180'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 80.0]
+    rotation: 0
+    state: true
+- name: blocks_stream_to_vector_0
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vector_size
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [896, 336.0]
+    rotation: 0
+    state: true
+- name: blocks_stream_to_vector_0_0
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vector_size
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [880, 408.0]
+    rotation: 0
+    state: true
+- name: blocks_stream_to_vector_0_1
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: vector_size
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [872, 504.0]
+    rotation: 0
+    state: true
+- name: blocks_throttle2_0
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 232.0]
+    rotation: 0
+    state: true
+- name: blocks_throttle2_0_0
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 352.0]
+    rotation: 0
+    state: true
+- name: blocks_throttle2_0_1
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 472.0]
+    rotation: 0
+    state: true
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Blocks:\n\nEach time this file is saved,\
+      \ GRC will instantiate the first class it finds\nto get ports and parameters\
+      \ of your block. The arguments to __init__  will\nbe the parameters. All of\
+      \ them are required to have default values!\n\"\"\"\n\nimport numpy as np\n\
+      from gnuradio import gr\n\n\nclass blk(gr.sync_block):  # other base classes\
+      \ are basic_block, decim_block, interp_block\n    \"\"\"Embedded Python Block\
+      \ example - a simple multiply const\"\"\"\n\n    def __init__(self, input_count=3,\
+      \ sample_rate=35e6, vector_size=180):  # only default arguments here\n     \
+      \   \"\"\"arguments to this function show up as parameters in GRC\"\"\"\n  \
+      \      gr.sync_block.__init__(\n            self,\n            name='Embedded\
+      \ Python Block',   # will show up in GRC\n            in_sig=[(np.complex64,\
+      \ vector_size) for i in range(input_count)],\n            out_sig=[(np.float32,\
+      \ vector_size)]\n        )\n        # if an attribute with the same name as\
+      \ a parameter is found,\n        # a callback is registered (properties work,\
+      \ too).\n        self.sample_rate = sample_rate\n        self.vector_size =\
+      \ vector_size\n        self.input_count = input_count\n\n\n    def work(self,\
+      \ input_items, output_items):\n        \"\"\"Calculate a angle using capon beam\
+      \ former\"\"\"\n        angles = np.linspace(0, 2, self.vector_size) * np.pi\n\
+      \        for i in range(np.asarray(input_items).shape[1]):\n            sig\
+      \ = np.squeeze(np.matrix(np.asanyarray(input_items)[:, i, :]))\n           \
+      \ power = []\n            for theta in angles:\n                # The weight\
+      \ vector simmilar in form to a beamformer generating signal\n              \
+      \  a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))\n\
+      \                # Multiply the wegits with the signal then average result\n\
+      \                r = sig @ sig.H\n                print(r.shape)\n         \
+      \       r = np.linalg.inv(r)\n                power.append(np.mean(20*np.log10(np.abs(1/(np.conj(a)\
+      \ @ r @ a.T)))))\n            output_items[0][i] = power\n        return len(output_items[0])"
+    affinity: ''
+    alias: ''
+    comment: ''
+    input_count: '3'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    sample_rate: samp_rate
+    vector_size: vector_size
+  states:
+    _io_cache: ('Embedded Python Block', 'blk', [('input_count', '3'), ('sample_rate',
+      '35000000.0'), ('vector_size', '180')], [('0', 'complex', 180), ('1', 'complex',
+      180), ('2', 'complex', 180)], [('0', 'float', 180)], 'Embedded Python Block
+      example - a simple multiply const', ['input_count', 'sample_rate', 'vector_size'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1096, 400.0]
+    rotation: 0
+    state: true
+- name: qtgui_time_sink_x_0
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'False'
+    gui_hint: ''
+    label1: Signal 1
+    label10: Signal 10
+    label2: Signal 2
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '3'
+    size: '1024'
+    srate: samp_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '1'
+    ymin: '-1'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1048, 160.0]
+    rotation: 0
+    state: true
+- name: qtgui_vector_sink_f_0
+  id: qtgui_vector_sink_f
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    grid: 'False'
+    gui_hint: ''
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    ref_level: '0'
+    showports: 'False'
+    update_time: '0.10'
+    vlen: vector_size
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    x_axis_label: '"x-Axis"'
+    x_start: '360'
+    x_step: '-2'
+    x_units: '""'
+    y_axis_label: '"y-Axis"'
+    y_units: '""'
+    ymax: '10'
+    ymin: '-10'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1312, 400.0]
+    rotation: 0
+    state: true
+- name: zeromq_sub_source_0
+  id: zeromq_sub_source
+  parameters:
+    address: tcp://localhost:60000
+    affinity: ''
+    alias: ''
+    bind: 'False'
+    comment: ''
+    hwm: '-1'
+    key: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pass_tags: 'False'
+    timeout: '100'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [360, 208.0]
+    rotation: 0
+    state: true
+- name: zeromq_sub_source_0_0
+  id: zeromq_sub_source
+  parameters:
+    address: tcp://localhost:60001
+    affinity: ''
+    alias: ''
+    bind: 'False'
+    comment: ''
+    hwm: '-1'
+    key: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pass_tags: 'False'
+    timeout: '100'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [360, 328.0]
+    rotation: 0
+    state: true
+- name: zeromq_sub_source_0_1
+  id: zeromq_sub_source
+  parameters:
+    address: tcp://localhost:60002
+    affinity: ''
+    alias: ''
+    bind: 'False'
+    comment: ''
+    hwm: '-1'
+    key: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pass_tags: 'False'
+    timeout: '100'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [360, 448.0]
+    rotation: 0
+    state: true
+
+connections:
+- [blocks_stream_to_vector_0, '0', epy_block_0, '0']
+- [blocks_stream_to_vector_0_0, '0', epy_block_0, '1']
+- [blocks_stream_to_vector_0_1, '0', epy_block_0, '2']
+- [blocks_throttle2_0, '0', blocks_stream_to_vector_0, '0']
+- [blocks_throttle2_0, '0', qtgui_time_sink_x_0, '0']
+- [blocks_throttle2_0_0, '0', blocks_stream_to_vector_0_0, '0']
+- [blocks_throttle2_0_0, '0', qtgui_time_sink_x_0, '1']
+- [blocks_throttle2_0_1, '0', blocks_stream_to_vector_0_1, '0']
+- [blocks_throttle2_0_1, '0', qtgui_time_sink_x_0, '2']
+- [epy_block_0, '0', qtgui_vector_sink_f_0, '0']
+- [zeromq_sub_source_0, '0', blocks_throttle2_0, '0']
+- [zeromq_sub_source_0_0, '0', blocks_throttle2_0_0, '0']
+- [zeromq_sub_source_0_1, '0', blocks_throttle2_0_1, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.7.0

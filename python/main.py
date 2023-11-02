@@ -6,11 +6,11 @@ import numpy as np
 LIGHTSPEED = 299792458
 
 class StateVector:
-    """Defines the position and velociry at some time"""
+    """Defines the position and velocity at some time"""
 
     def __init__(self, position, velocity):
-        self.position = position
-        self.velocity = velocity
+        self.position = np.array(position)
+        self.velocity = np.array(velocity)
 
     def get_distance(self, state_vector):
         """Get the distance between another state vector"""
@@ -19,23 +19,39 @@ class StateVector:
             dist += (self.position[i] - state_vector.position[i]) ** 2
         return np.sqrt(dist)
 
-class Channel:
-    """Defines a channel overwich a signal is transmitted"""
+class motion:
+    """Represents the motion of a radio"""
+    def __init__(self, start_time):
+        self.start_time = start_time
 
-    def __init__(self, dist:float, path_loss_type="FreeSpace"):
-        self.path_loss_type = path_loss_type
-        self.dist = dist
-        self.tx_height = 1
-        self.rx_height = 1
-        self.tx_power = 1
-        self.rx_power = 1
+    def interp_at_time(self) -> StateVector:
+        return None
 
-    def channel(self, sig_input: np.ndarray, freq: float):
-        """Transform and input singal to output over a channel"""
-        if self.path_loss_type == "FreeSpace":
-            output = sig_input * (4 * np.pi * self.dist * freq / LIGHTSPEED)**2
-        else: output = sig_input
-        return output
+class motion_linear(motion):
+    """Represents linear motion"""
+    def __init__(self, start_time: float, start: StateVector, end: StateVector, speed: float):
+        super().__init__(start_time)
+        self.start = start
+        self.end = end
+        self.speed = speed
+        self.velocity = (end.position - start.position) * (speed/start.get_distance(end))
+        self.dist = start.get_distance(end)
+
+    def interp_at_time(self, time:float) -> StateVector:
+        frac = (time - self.start_time) * self.speed
+        pos = self.start + (self.end - self.start) * frac
+        return StateVector(pos, self.velocity)
+
+
+class motion_static(motion):
+    """Represents static motion"""
+    def __init__(self, start_time:float, start: StateVector):
+        super().__init__(start_time)
+        self.start = start
+    
+    def interp_at_time(self, time) -> StateVector:
+        return self.start
+
 
 class Radio:
     """A representation of an SDR with antenna location and power"""
@@ -59,7 +75,7 @@ class Radio:
 
 class RadioTx(Radio):
 
-    def __init__(self, power: float, 
+    def __init__(self, power: float,
                 state_vector: StateVector,
                 sps: float,
                 height: float,
@@ -71,11 +87,11 @@ class RadioTx(Radio):
 
 class RadioRx(Radio):
 
-    def __init__(self, power: float, 
-                state_vector: StateVector, 
-                sps: float, 
-                height: float, 
-                zmq_address: str, 
+    def __init__(self, power: float,
+                state_vector: StateVector,
+                sps: float,
+                height: float,
+                zmq_address: str,
                 zmq_topic: str):
         super().__init__(power, state_vector, sps, height)
         self.context = zmq.Context()

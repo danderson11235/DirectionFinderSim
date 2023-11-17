@@ -115,23 +115,26 @@ class AntennaArray():
         self.light_speed = LIGHTSPEED
         self.rx_path_loss = np.ones((len(rx_radio), len(tx_radio)))
         self.noise_power = 8
+        self.channel_loss()
 
     def sim(self, t_start: float, t_sec: float):
         """Generates output for each receiver"""
         signals = [radio.generate(radio.freq, t_start, t_sec) for radio in self.tx_radio]
-        for radio in self.rx_radio:
+        for j, radio in enumerate(self.rx_radio):
             message = np.zeros(signals[0].shape) + 1j*np.zeros(signals[0].shape)
             for i, sig in enumerate(signals):
+                noise = self.large_scale(len(message))
                 dist = radio.state_vector.get_distance(self.tx_radio[i].state_vector)
                 phase_shift = dist * self.tx_radio[i].freq * 2 * np.pi / self.light_speed
-                message += sig * np.exp(1j * phase_shift)
+                freq_shift = 0
+                message += 10**(self.rx_path_loss[j, i]/10) * sig * np.exp(1j * phase_shift - freq_shift) + noise
             radio.recv(message)
 
     def channel_loss(self):
         """Calculate a channel matrix for future loss calculations, 
             Uses Hata model for medium cities"""
         for i, rx in self.rx_radio:
-            for j, tx in self.rx_radio:
+            for j, tx in self.tx_radio:
                 loss = 69.55 + 26.16*np.log10(tx.freq / 1e6) - 13.82 * np.log10(tx.height) - \
                     (tx.freq_factor + tx.height_factor * rx.height) + (44.9 - 6.55 * np.log10(tx.height)) \
                     * tx.state_vector.get_distance(rx.state_vector)

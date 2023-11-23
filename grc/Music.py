@@ -47,7 +47,6 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
                 a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))
                 # The main music algorithm
                 p = 1 / (a.H @ eigen_vec_remain @ eigen_vec_remain.H @ a)
-                p = np.abs(p[0,0])
                 power.append(10*np.log10(np.abs(p[0,0])))
             output_items[0][i] = power
         return len(output_items[0])

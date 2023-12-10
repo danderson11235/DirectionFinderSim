@@ -33,12 +33,13 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
         angles = np.linspace(0, 2, self.vector_size) * np.pi
         for i in range(np.asarray(input_items).shape[1]):
             sig = np.squeeze(np.matrix(np.asanyarray(input_items)[:, i, :]))
+            r = sig @ sig.H
             power = []
             for theta in angles:
                 # The weight vector simmilar in form to a beamformer generating signal
                 a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))
                 # Multiply the wegits with the signal then average result
-                r = np.conj(a) @ sig
+                r = np.conj(a) @ sig @ a.T
                 power.append(np.mean(20*np.log10(np.abs(r))))
             output_items[0][i] = power
         return len(output_items[0])

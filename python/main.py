@@ -24,7 +24,7 @@ class motion:
     def __init__(self, start_time):
         self.start_time = start_time
 
-    def interp_at_time(self) -> StateVector:
+    def interp_at_time(self, sim_time:float) -> StateVector:
         return None
 
 class motion_linear(motion):
@@ -37,8 +37,8 @@ class motion_linear(motion):
         self.velocity = (end.position - start.position) * (speed/start.get_distance(end))
         self.dist = start.get_distance(end)
 
-    def interp_at_time(self, time:float) -> StateVector:
-        frac = (time - self.start_time) * self.speed
+    def interp_at_time(self, sim_time:float) -> StateVector:
+        frac = (sim_time - self.start_time) * self.speed
         pos = self.start + (self.end - self.start) * frac
         return StateVector(pos, self.velocity)
 
@@ -49,7 +49,7 @@ class motion_static(motion):
         super().__init__(start_time)
         self.start = start
     
-    def interp_at_time(self, time) -> StateVector:
+    def interp_at_time(self, sim_time) -> StateVector:
         return self.start
 
 
@@ -133,11 +133,11 @@ class AntennaArray():
     def channel_loss(self):
         """Calculate a channel matrix for future loss calculations, 
             Uses Hata model for medium cities"""
-        for i, rx in self.rx_radio:
-            for j, tx in self.tx_radio:
+        for i, rx in enumerate(self.rx_radio):
+            for j, tx in enumerate(self.tx_radio):
                 loss = 69.55 + 26.16*np.log10(tx.freq / 1e6) - 13.82 * np.log10(tx.height) - \
                     (tx.freq_factor + tx.height_factor * rx.height) + (44.9 - 6.55 * np.log10(tx.height)) \
-                    * tx.state_vector.get_distance(rx.state_vector)
+                    * np.log10(tx.state_vector.get_distance(rx.state_vector))
                 self.rx_path_loss[i,j] = loss
 
     def large_scale(self, lenght):

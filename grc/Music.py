@@ -13,7 +13,7 @@ from gnuradio import gr
 class blk(gr.sync_block):  # other base classes are basic_block, decim_block, interp_block
     """Embedded Python Block example - a simple multiply const"""
 
-    def __init__(self, input_count=3, sample_rate=35e6, vector_size=180, expected_count=2):  # only default arguments here
+    def __init__(self, input_count=3, sample_rate=35e6, vector_size=180, expected_count=2, spacing=.5):  # only default arguments here
         """arguments to this function show up as parameters in GRC"""
         gr.sync_block.__init__(
             self,
@@ -27,6 +27,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
         self.vector_size = vector_size
         self.input_count = input_count
         self.expected_count = expected_count
+        self.spacing = spacing
 
 
     def work(self, input_items, output_items):
@@ -44,7 +45,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
                 eigen_vec_remain[:,i] = eigen_vec[:,i]
             for theta in angles:
                 # The weight vector simmilar in form to a beamformer generating signal
-                a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))
+                a = np.matrix(np.exp(2*-1j*np.pi*self.spacing*np.arange(self.input_count)*np.sin(theta)))
                 # The main music algorithm
                 p = 1 / (a.H @ eigen_vec_remain @ eigen_vec_remain.H @ a)
                 power.append(10*np.log10(np.abs(p[0,0])))

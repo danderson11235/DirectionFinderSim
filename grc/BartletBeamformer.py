@@ -17,7 +17,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
         """arguments to this function show up as parameters in GRC"""
         gr.sync_block.__init__(
             self,
-            name='Embedded Python Block',   # will show up in GRC
+            name='Bartlet Beam Former',   # will show up in GRC
             in_sig=[(np.complex64, vector_size) for i in range(input_count)],
             out_sig=[(np.float32, vector_size)]
         )
@@ -30,16 +30,16 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
 
     def work(self, input_items, output_items):
         """Calculate a angle using capon beam former"""
-        angles = np.linspace(0, 2, self.vector_size) * np.pi
+        angles = np.linspace(-.5, .5, self.vector_size) * np.pi
         for i in range(np.asarray(input_items).shape[1]):
             sig = np.squeeze(np.matrix(np.asanyarray(input_items)[:, i, :]))
             r = sig @ sig.H
             power = []
             for theta in angles:
                 # The weight vector simmilar in form to a beamformer generating signal
-                a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))
+                a = np.matrix(np.exp(-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))
                 # Multiply the wegits with the signal then average result
-                r = np.conj(a) @ sig @ a.T
+                r = np.conj(a) @ sig
                 power.append(np.mean(20*np.log10(np.abs(r))))
             output_items[0][i] = power
         return len(output_items[0])

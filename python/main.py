@@ -127,7 +127,7 @@ class AntennaArray():
                 dist = radio.state_vector.get_distance(self.tx_radio[i].state_vector)
                 phase_shift = dist * self.tx_radio[i].freq * 2 * np.pi / self.light_speed
                 freq_shift = 0
-                message += 10**(self.rx_path_loss[j, i]/10) * sig * np.exp(1j * phase_shift - freq_shift) + noise
+                message += sig * 10**((2*radio.power-self.rx_path_loss[j,i])/10) * np.exp(1j * phase_shift - freq_shift) + noise
             radio.recv(message)
 
     def channel_loss(self):
@@ -139,6 +139,7 @@ class AntennaArray():
                     (tx.freq_factor + tx.height_factor * rx.height) + (44.9 - 6.55 * np.log10(tx.height)) \
                     * np.log10(tx.state_vector.get_distance(rx.state_vector))
                 self.rx_path_loss[i,j] = loss
+                print(loss)
 
     def large_scale(self, lenght):
         """Apply large scale fading to a signal"""
@@ -148,11 +149,11 @@ class AntennaArray():
 
 def main():
     """The main execution"""
-    sps = 2.5E6
-    tx_pos = StateVector([200000,200000], [0,0])
+    sps = 3.5E6
+    tx_pos = StateVector([40000,40000], [0,0])
     rx_pos = [StateVector([(i-1)*1500,0], [0,0]) for i in range(3)]
-    rtx = [RadioTx(10, tx_pos, sps, 30, 1e5)]
-    rrx = [RadioRx(10, rxp, sps, 1.5, f"tcp://*:6000{i}", b'') for i, rxp in enumerate(rx_pos)]
+    rtx = [RadioTx(120, tx_pos, sps, 30, 1e5)]
+    rrx = [RadioRx(120, rxp, sps, 1.5, f"tcp://*:6000{i}", b'') for i, rxp in enumerate(rx_pos)]
     antena_array = AntennaArray(rtx, rrx)
     now = time.time()
     rate = 1.0

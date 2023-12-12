@@ -196,39 +196,46 @@ blocks:
       from gnuradio import gr\n\n\nclass blk(gr.sync_block):  # other base classes\
       \ are basic_block, decim_block, interp_block\n    \"\"\"Embedded Python Block\
       \ example - a simple multiply const\"\"\"\n\n    def __init__(self, input_count=3,\
-      \ sample_rate=35e6, vector_size=180):  # only default arguments here\n     \
-      \   \"\"\"arguments to this function show up as parameters in GRC\"\"\"\n  \
-      \      gr.sync_block.__init__(\n            self,\n            name='Embedded\
-      \ Python Block',   # will show up in GRC\n            in_sig=[(np.complex64,\
+      \ sample_rate=35e6, vector_size=180, expected_count=1, spacing=.5):  # only\
+      \ default arguments here\n        \"\"\"arguments to this function show up as\
+      \ parameters in GRC\"\"\"\n        gr.sync_block.__init__(\n            self,\n\
+      \            name='MUSIC DOA',   # will show up in GRC\n            in_sig=[(np.complex64,\
       \ vector_size) for i in range(input_count)],\n            out_sig=[(np.float32,\
       \ vector_size)]\n        )\n        # if an attribute with the same name as\
       \ a parameter is found,\n        # a callback is registered (properties work,\
       \ too).\n        self.sample_rate = sample_rate\n        self.vector_size =\
-      \ vector_size\n        self.input_count = input_count\n\n\n    def work(self,\
-      \ input_items, output_items):\n        \"\"\"Calculate a angle using capon beam\
-      \ former\"\"\"\n        angles = np.linspace(0, 2, self.vector_size) * np.pi\n\
-      \        for i in range(np.asarray(input_items).shape[1]):\n            sig\
-      \ = np.squeeze(np.matrix(np.asanyarray(input_items)[:, i, :]))\n           \
-      \ power = []\n            for theta in angles:\n                # The weight\
-      \ vector simmilar in form to a beamformer generating signal\n              \
-      \  a = np.matrix(np.exp(2*-1j*np.pi*np.arange(self.input_count)*np.sin(theta)))\n\
-      \                # Multiply the wegits with the signal then average result\n\
-      \                r = sig @ sig.H\n                print(r.shape)\n         \
-      \       r = np.linalg.inv(r)\n                power.append(np.mean(20*np.log10(np.abs(1/(np.conj(a)\
-      \ @ r @ a.T)))))\n            output_items[0][i] = power\n        return len(output_items[0])"
+      \ vector_size\n        self.input_count = input_count\n        self.expected_count\
+      \ = expected_count\n        self.spacing = spacing\n\n\n    def work(self, input_items,\
+      \ output_items):\n        \"\"\"Calculate a angle using music algorithm\"\"\"\
+      \n        angles = np.linspace(-.5, .5, self.vector_size) * np.pi\n        for\
+      \ i in range(np.asarray(input_items).shape[1]):\n            sig = np.squeeze(np.matrix(np.asanyarray(input_items)[:,\
+      \ i, :]))\n            power = []\n            r = sig @ sig.H\n           \
+      \ eigen_val, eigen_vec = np.linalg.eig(r)\n            eigen_val_sort = np.argsort(np.abs(eigen_val))\n\
+      \            eigen_vec = eigen_vec[:, eigen_val_sort]\n            eigen_vec_remain\
+      \ = np.asmatrix(np.zeros((self.input_count, self.input_count - self.expected_count),\
+      \ dtype=np.complex128))\n            for i in range(self.input_count - self.expected_count):\n\
+      \                eigen_vec_remain[:,i] = eigen_vec[:,i]\n            for theta\
+      \ in angles:\n                # The weight vector simmilar in form to a beamformer\
+      \ generating signal\n                a = np.matrix(np.exp(-1j*np.pi*np.arange(self.input_count)*np.sin(theta))).T\n\
+      \                # The main music algorithm\n                p = 1 / (a.H @\
+      \ eigen_vec_remain @ eigen_vec_remain.H @ a)\n                power.append(10*np.log10(np.abs(p[0,0])))\n\
+      \            output_items[0][i] = power\n        return len(output_items[0])\n"
     affinity: ''
-    alias: ''
+    alias: Capon
     comment: ''
+    expected_count: '1'
     input_count: '3'
     maxoutbuf: '0'
     minoutbuf: '0'
     sample_rate: samp_rate
+    spacing: '.5'
     vector_size: vector_size
   states:
-    _io_cache: ('Embedded Python Block', 'blk', [('input_count', '3'), ('sample_rate',
-      '35000000.0'), ('vector_size', '180')], [('0', 'complex', 180), ('1', 'complex',
-      180), ('2', 'complex', 180)], [('0', 'float', 180)], 'Embedded Python Block
-      example - a simple multiply const', ['input_count', 'sample_rate', 'vector_size'])
+    _io_cache: ('MUSIC DOA', 'blk', [('input_count', '3'), ('sample_rate', '35000000.0'),
+      ('vector_size', '180'), ('expected_count', '1'), ('spacing', '0.5')], [('0',
+      'complex', 180), ('1', 'complex', 180), ('2', 'complex', 180)], [('0', 'float',
+      180)], 'Embedded Python Block example - a simple multiply const', ['expected_count',
+      'input_count', 'sample_rate', 'spacing', 'vector_size'])
     bus_sink: false
     bus_source: false
     bus_structure: null
@@ -250,7 +257,7 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
+    autoscale: 'True'
     axislabels: 'True'
     color1: blue
     color10: dark blue
@@ -290,7 +297,7 @@ blocks:
     marker9: '-1'
     name: '""'
     nconnections: '3'
-    size: '1024'
+    size: '100'
     srate: samp_rate
     stemplot: 'False'
     style1: '1'
@@ -347,7 +354,7 @@ blocks:
     alpha7: '1.0'
     alpha8: '1.0'
     alpha9: '1.0'
-    autoscale: 'False'
+    autoscale: 'True'
     average: '1.0'
     color1: '"blue"'
     color10: '"dark blue"'
@@ -392,8 +399,8 @@ blocks:
     width8: '1'
     width9: '1'
     x_axis_label: '"x-Axis"'
-    x_start: '360'
-    x_step: '-2'
+    x_start: '-90'
+    x_step: '1'
     x_units: '""'
     y_axis_label: '"y-Axis"'
     y_units: '""'

@@ -1,1 +1,7 @@
 .vscode
+sklearn-venv/bin/
+sklearn-venv/lib/
+sklearn-venv
+sklearn-venv/bin/activate.csh
+sklearn-venv/bin/jupyter-troubleshoot
+models/__pycache__/BeamGen.cpython-311.pyc

@@ -105,6 +105,31 @@ class RadioRx(Radio):
         message = np.array(message, dtype=np.complex64)
         self.socket.send(message.tobytes())
 
+class RadioRxFile(Radio):
+
+    def __init__(self, power: float,
+                state_vector: StateVector,
+                sps: float,
+                height: float,
+                file_name: str):
+        super().__init__(power, state_vector, sps, height)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PUB)
+        self.file_name = file_name
+        f = open(file_name, "w")
+        f.write(file_name)
+        f.write("\n")
+        f.close()
+
+
+    def recv(self, message: np.array):
+        """Takes in a message and transmits it over zmq to a gnu radio endpoint"""
+        message = np.array(message, dtype=np.complex64)
+        np.save(self.file_name, message)
+        # with open(self.file_name, "a") as f:
+        #     f.write(np.array2string(message))
+        #     f.write("\n")
+
 
 class AntennaArray():
     """Represents an array of antennas"""
@@ -139,7 +164,7 @@ class AntennaArray():
                     (tx.freq_factor + tx.height_factor * rx.height) + (44.9 - 6.55 * np.log10(tx.height)) \
                     * np.log10(tx.state_vector.get_distance(rx.state_vector))
                 self.rx_path_loss[i,j] = loss
-                print(loss)
+                # print(loss)
 
     def large_scale(self, lenght):
         """Apply large scale fading to a signal"""

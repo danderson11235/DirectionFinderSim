@@ -116,16 +116,12 @@ class RadioRxFile(Radio):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
         self.file_name = file_name
-        f = open(file_name, "w")
-        f.write(file_name)
-        f.write("\n")
-        f.close()
 
 
     def recv(self, message: np.array):
         """Takes in a message and transmits it over zmq to a gnu radio endpoint"""
         message = np.array(message, dtype=np.complex64)
-        np.save(self.file_name, message)
+        message.tofile(self.file_name)
         # with open(self.file_name, "a") as f:
         #     f.write(np.array2string(message))
         #     f.write("\n")

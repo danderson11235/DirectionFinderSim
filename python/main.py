@@ -2,6 +2,7 @@
 import time
 import zmq
 import numpy as np
+import matplotlib.pyplot as plt
 
 LIGHTSPEED = 299792458
 
@@ -85,6 +86,26 @@ class RadioTx(Radio):
         self.freq_factor = .8 - 1.56 * np.log10(freq)
         self.height_factor = (1.1 * np.log10(freq) - .7)
 
+
+class RadioTxPhaseDrift(RadioTx):
+
+    def __init__(self, power: float,
+                state_vector: StateVector,
+                sps: float,
+                height: float,
+                freq: float,
+                std: float=.001):
+        super().__init__(power, state_vector, sps, height, freq)
+        self.std = std
+
+    def generate(self, freq: float, t_start: float, t_sec: float):
+        """Generate a complex sinusoid with radom phase drift for this radio"""
+        phase = np.random.randn(int(t_sec * self.sps)) * self.std * 2 * np.pi
+        phase = np.cumsum(phase) + np.random.randn()
+        data = np.linspace(t_start, t_start + t_sec, int(t_sec * self.sps))
+        data = np.cos(data*(2*np.pi)*freq + phase) + 1j * np.sin(data*(2*np.pi)*freq + phase)
+        return data
+
 class RadioRx(Radio):
 
     def __init__(self, power: float,
@@ -113,15 +134,17 @@ class RadioRxFile(Radio):
                 height: float,
                 file_name: str):
         super().__init__(power, state_vector, sps, height)
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
         self.file_name = file_name
+        f = open(self.file_name, 'wb')
+        f.close()
+
 
 
     def recv(self, message: np.array):
         """Takes in a message and transmits it over zmq to a gnu radio endpoint"""
         message = np.array(message, dtype=np.complex64)
-        message.tofile(self.file_name)
+        with open(self.file_name, 'ab') as f:
+            np.save(f, message)
         # with open(self.file_name, "a") as f:
         #     f.write(np.array2string(message))
         #     f.write("\n")

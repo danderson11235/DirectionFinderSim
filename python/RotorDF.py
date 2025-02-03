@@ -59,11 +59,11 @@ def polar_to_rect(pol_arr, rect_arr_shape)->np.ndarray:
                 angle = np.arctan(j_shift/i_shift)
             if r > 1:
                 continue
-            if i_shift < 0:
-                angle += np.pi
-            # rect_arr[i,j] += pol_arr[int(angle*angle_scale)][ int(r*dest_r)] +\
-                # pol_arr[int((angle + np.pi)*angle_scale)][ int(-r*dest_r)]
-            rect_arr[i,j] = pol_arr[int(angle*angle_scale)][ int(r*dest_r)] 
+            # if i_shift < 0:
+                # angle += np.pi
+            rect_arr[i,j] += pol_arr[int(angle*angle_scale)][ int(r*dest_r)] +\
+                pol_arr[int((angle + np.pi)*angle_scale)][ int(-r*dest_r)]
+            # rect_arr[i,j] = pol_arr[int(angle*angle_scale)][ int(r*dest_r)] 
     return rect_arr
 
 
@@ -71,11 +71,11 @@ def rotationSim():
     spun_data = []
     sps = 1e9
     # tx_pos = [(100,100,100), (100,-300,100)]
-    tx_pos = [(100,100,100)]
+    tx_pos = [(100,100,-100)]
     rx_pos = [np.array([7.5,0,0]), np.array([-7.5,0,0])]
     tx_sv = [main.StateVector(p, (0,0,0)) for p in tx_pos]
-    tx_radio = [main.RadioTx(12, xv, sps, 30, 1e7 + 1e4*np.random.randint(2,8)) for xv in tx_sv]
-    phi_range = np.linspace(0, np.pi, 360)
+    tx_radio = [main.RadioTx(12, xv, sps, 30, 1e7 + 1e3*np.random.randint(2,8)) for xv in tx_sv]
+    phi_range = np.linspace(0, 2*np.pi, 360)
     bf = BeamFormer(2)
     for phi in phi_range:
         cur_rx = [rotate_arround_z(rx, phi) for rx in rx_pos]
@@ -94,7 +94,7 @@ def rotationSim():
     X,Y = np.meshgrid(x,y)
     ax.plot_wireframe(X, Y, spun_data, rstride=10, cstride=10)
     plt.show()
-    plt.imshow(spun_data)
+    plt.imshow(spun_data, extent=[-99, 90, 360, 0])
     plt.show()
 
 

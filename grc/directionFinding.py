@@ -8,7 +8,7 @@
 # Title: Not titled yet
 # GNU Radio version: 3.10.7.0
 
-from packaging.version import Version as StrictVersion
+# from packaging.version import Version as StrictVersion
 from PyQt5 import Qt
 from gnuradio import qtgui
 from gnuradio import blocks

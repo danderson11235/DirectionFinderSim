@@ -162,3 +162,37 @@ tracking_angles[:-1] = -180   # make a line across the plot when tracking begins
 
 # For each angle calculate the phase offset
 # 
+
+def plotRotor(angles, results):
+    dimm = results.shape[1]
+    dimm2 = dimm**2/4
+    np.zeros((dimm, dimm))
+    for y in (np.arange(dimm)-dimm//2):
+        for x in (np.arange(dimm)-dimm//2):
+            if (y**2 + x**2) > dimm2:
+                continue
+            pt = x + 1j*y
+            theta = np.arctan2(y, x)
+            radius = np.sqrt(y**2 + x**2)
+
+
+def dfGen(resolution):
+    res = np.zeros(resolution)
+
+def rotorDF(dfResolution=180, angleResolution=1, angleMin=-90, angleMax=90):
+    # Version 2 rotor df at each angle
+    # init
+    arduino.reset()
+    arduino.setDirection(ad.CLOCKWISE)
+    # set to -90 to prep for rotation
+    arduino.gotoAngle(angleMin)
+    arduino.setDirection(ad.WITTERSHINS)
+
+    # for each angle rotate arm and record snapshot
+    angleResolution = 1
+    angles = np.arange(angleMin, angleMax+1, angleResolution)
+    dfResults = np.zeros(len(angles), dfResolution)
+    for angle, dfRes in zip(angles, dfResults):
+        dfRes = dfGen(dfResolution)
+        arduino.gotoAngle(angle)
+    return angles, dfResults

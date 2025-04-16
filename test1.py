@@ -248,5 +248,3 @@ if __name__ == '__main__':
         
 sdr.tx_destroy_buffer()
 
-
-       

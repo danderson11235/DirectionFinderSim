@@ -30,6 +30,7 @@ void boundedRot(int nextPos) {
   int steps = (nextPos - curPos);
   if (steps > stepsPerRevolution/2-1 || steps < -stepsPerRevolution/2)
     return;
+  curPos = nextPos;
   stepper.step(steps);
 }
 

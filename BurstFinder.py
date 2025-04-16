@@ -1,6 +1,7 @@
 import adi
 import numpy as np
 import pyqtgraph as pg
+import matplotlib.pyplot as plt
 import serial
 import ArduinoDriver as  ad
 
@@ -19,6 +20,8 @@ tx_gain = -3
 fc0 = int(200e3)
 phase_cal = 0
 tracking_length = 1000
+
+rx_phase_offset1 = 52.9170966 * np.pi / 180.0
 
 d_wavelength = 0.0625 # Distance between elements in meters
 wavelength = 3E8/rx_lo              # wavelength of the RF carrier
@@ -175,24 +178,58 @@ def plotRotor(angles, results):
             theta = np.arctan2(y, x)
             radius = np.sqrt(y**2 + x**2)
 
+def plotRect(angles, results):
+    plt.imshow(results)
+    plt.show()
 
-def dfGen(resolution):
-    res = np.zeros(resolution)
 
-def rotorDF(dfResolution=180, angleResolution=1, angleMin=-90, angleMax=90):
+def getX():
+    return np.matrix(sdr.rx())
+
+def w_mvdr(theta, X):
+    s = np.exp(-2j * np.pi * .5 * np.arange(2) * np.sin(theta) + rx_phase_offset1)
+    s = np.matrix(s.reshape(-1,1))
+    R = (X @ X.H) / X.shape[1]
+    Rinv = np.matrix(np.linalg.pinv(R))
+    w = (Rinv @ s)/(s.H @ Rinv @ s)
+    return w
+
+def dfGenCapon(resolution):
+    res = []
+    thetaScan = np.linspace(-1*np.pi, np.pi, resolution)
+    X = getX()
+    for theta in thetaScan:
+        w = w_mvdr(theta, X)
+        X_weight = w.H @ X
+        power = 10*np.log10(np.var(X_weight))
+        res.append(power)
+    return np.array(res)
+
+
+
+def rotorDF(dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
     # Version 2 rotor df at each angle
     # init
     arduino.reset()
     arduino.setDirection(ad.CLOCKWISE)
     # set to -90 to prep for rotation
-    arduino.gotoAngle(angleMin)
+    arduino.gotoBoundAngle(angleMin)
     arduino.setDirection(ad.WITTERSHINS)
 
     # for each angle rotate arm and record snapshot
-    angleResolution = 1
-    angles = np.arange(angleMin, angleMax+1, angleResolution)
-    dfResults = np.zeros(len(angles), dfResolution)
-    for angle, dfRes in zip(angles, dfResults):
-        dfRes = dfGen(dfResolution)
-        arduino.gotoAngle(angle)
-    return angles, dfResults
+    try:
+        angles = np.arange(angleMin, angleMax+1, angleResolution)
+        dfResults = np.zeros((len(angles), dfResolution))
+        for angle, dfRes in zip(angles, dfResults):
+            dfRes += dfGenCapon(dfResolution)
+            arduino.gotoBoundAngle(angle)
+
+        arduino.gotoBoundAngle(0)
+        return angles, dfResults
+    except:
+        arduino.gotoBoundAngle(0)
+        return np.array([0]), np.array([0])
+
+# angles, dfResults = rotorDF()
+# plotRect(angles, dfResults)
+# np.save('df_1_-90_90(2).npy', dfResults)

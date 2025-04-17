@@ -206,6 +206,64 @@ def dfGenCapon(resolution):
     return np.array(res)
 
 
+"""
+phi measures deflection from the z vector
+theta measures angle wittershins from x vector
+"""
+def spherical2cartesian(theta, phi, rho):
+    x = rho*np.cos(theta)*np.sin(phi)
+    y = rho * np.sin(theta)*np.sin(phi)
+    z = rho * np.cos(phi)
+    return np.array(x,y,z)
+
+def cartesian2spherical(x,y,z):
+    rho = np.sqrt(x**2 + y**2 + z**2)
+    theta = np.arctan2(x, y)
+    phi = np.arctan2(np.sqrt(x**2 + y**2), z)
+
+"""Retruns the shortest distance between an point and a plane"""
+def point2plane(point, normal):
+    return np.abs(normal[0]*point[0] + normal[1]*point[1] + normal[2]*point[2]) / np.linalg.norm(normal)
+
+
+"""
+Conventions for this class
+phi measures deflection from the z vector
+theta measures angle wittershins from x vector
+"""
+class CircMUSIC:
+    def __init__(self, freq, radius, rxAngles):
+        self.freq = freq
+        self.radius = radius
+        self.rxAngles = rxAngles
+
+    def genArrayA(self, thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
+        A = []
+        for i, theta in enumerate(thetas):
+            A_t = []
+            for j, phi in enumerate(phis):
+                a = np.zeros(rxPos.shape)
+                normalCar = spherical2cartesian(theta, phi, 1)
+                phaseShiftZero = 0
+                for k, rx in enumerate(rxPos):
+                    # First calculate the distance from the impart plane to the rx
+                    if type(rx) is not np.ndarray:
+                        rxCar = spherical2cartesian(rx, np.pi/2, self.radius)
+                    else:
+                        rxCar = rx
+                    d = point2plane(rxCar, normalCar)
+                    phaseShift = d * 3e8 / self.freq * np.pi * 2
+                    if (np.dot(rxCar, normalCar)) > 0:
+                        phaseShift = -phaseShift
+                    if k == 0:
+                        phaseShiftZero = phaseShift
+                    a[k] = np.exp(1j*(phaseShift - phaseShiftZero))
+
+                A_t.append(a)
+            A.append(A_t)
+
+
+
 
 def rotorDF(dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
     # Version 2 rotor df at each angle

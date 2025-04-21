@@ -1,7 +1,9 @@
 import adi
+import time
 import numpy as np
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import serial
 import ArduinoDriver as  ad
 
@@ -16,7 +18,7 @@ rx_gain1 = 40
 tx_lo_low = rx_lo_low
 tx_lo = rx_lo_low
 tx_lo_high = rx_lo_high
-tx_gain = -3
+tx_gain = -30
 fc0 = int(200e3)
 phase_cal = 0
 tracking_length = 1000
@@ -44,7 +46,7 @@ sdr.tx_rf_bandwidth = int(fc0*3)
 sdr.tx_lo = int(tx_lo_low)
 sdr.tx_cyclic_buffer = True
 sdr.tx_hardwaregain_chan0 = int(tx_gain)
-sdr.tx_hardwaregain_chan1 = int(-88)
+sdr.tx_hardwaregain_chan1 = int(tx_gain)
 sdr.tx_buffer_size = int(2**18)
 
 '''Program Tx and Send Data'''
@@ -54,8 +56,11 @@ ts = 1 / float(fs)
 t = np.arange(0, N * ts, ts)
 i0 = np.cos(2 * np.pi * t * fc0) * 2 ** 14
 q0 = np.sin(2 * np.pi * t * fc0) * 2 ** 14
+i1 = np.cos(2 * np.pi * t * .95* fc0) * 2 ** 14
+q1 = np.sin(2 * np.pi * t * .95* fc0) * 2 ** 14
 iq0 = i0 + 1j * q0
-sdr.tx([iq0,iq0])  # Send Tx data.
+iq1 = i1 + 1j * q1
+sdr.tx([iq0,iq1])  # Send Tx data.
 
 # Assign frequency bins and "zoom in" to the fc0 signal on those frequency bins
 xf = np.fft.fftfreq(num_samples, ts)
@@ -64,7 +69,7 @@ signal_start = int(num_samples*(samp_rate/2+fc0/2)/samp_rate)
 signal_end = int(num_samples*(samp_rate/2+fc0*2)/samp_rate)
 
 '''Configure arduino'''
-arduino = ad.SerialDevice("COM5")
+arduino = ad.SerialDevice("COM5", 115200)
 angle_low = -90
 angle_high = 90
 
@@ -182,6 +187,15 @@ def plotRect(angles, results):
     plt.imshow(results)
     plt.show()
 
+def plot3D(angles, results):
+    x = np.linspace(angles[0], angles[1], results.shape[0])
+    y = np.linspace(angles[2], angles[3], results.shape[1])
+    x,y = np.meshgrid(x,y)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(x,y,results.T)
+    plt.show()
+
 
 def getX():
     return np.matrix(sdr.rx())
@@ -196,7 +210,7 @@ def w_mvdr(theta, X):
 
 def dfGenCapon(resolution):
     res = []
-    thetaScan = np.linspace(-1*np.pi, np.pi, resolution)
+    thetaScan = np.linspace(-1*np.pi/2, np.pi/2, resolution)
     X = getX()
     for theta in thetaScan:
         w = w_mvdr(theta, X)
@@ -214,7 +228,7 @@ def spherical2cartesian(theta, phi, rho):
     x = rho*np.cos(theta)*np.sin(phi)
     y = rho * np.sin(theta)*np.sin(phi)
     z = rho * np.cos(phi)
-    return np.array(x,y,z)
+    return np.array([x,y,z])
 
 def cartesian2spherical(x,y,z):
     rho = np.sqrt(x**2 + y**2 + z**2)
@@ -231,37 +245,108 @@ Conventions for this class
 phi measures deflection from the z vector
 theta measures angle wittershins from x vector
 """
-class CircMUSIC:
-    def __init__(self, freq, radius, rxAngles):
-        self.freq = freq
-        self.radius = radius
-        self.rxAngles = rxAngles
+def genArrayA(thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
+    if np.max(rxPos) > 3*np.pi:
+        rxPos *= (np.pi/180.0)
+    A = []
+    for i, theta in enumerate(thetas):
+        A_t = []
+        for j, phi in enumerate(phis):
+            a = np.zeros(rxPos.shape, dtype=np.complex128)
+            normalCar = spherical2cartesian(theta, phi, 1)
+            phaseShiftZero = 0
+            for k, rx in enumerate(rxPos):
+                # First calculate the distance from the impart plane to the rx
+                if type(rx) is not np.ndarray:
+                    rxCar = spherical2cartesian(rx, np.pi/2, wavelength/4)
+                else:
+                    rxCar = rx
+                d2plane = point2plane(rxCar, normalCar)
+                phaseShift = d2plane / 3e8 * rx_lo * np.pi * 2
+                if (np.dot(rxCar, normalCar)) > 0:
+                    phaseShift = -phaseShift
+                if k == 0:
+                    phaseShiftZero = phaseShift
+                a[k] = np.exp(1j*(phaseShift - phaseShiftZero))
 
-    def genArrayA(self, thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
-        A = []
-        for i, theta in enumerate(thetas):
-            A_t = []
-            for j, phi in enumerate(phis):
-                a = np.zeros(rxPos.shape)
-                normalCar = spherical2cartesian(theta, phi, 1)
-                phaseShiftZero = 0
-                for k, rx in enumerate(rxPos):
-                    # First calculate the distance from the impart plane to the rx
-                    if type(rx) is not np.ndarray:
-                        rxCar = spherical2cartesian(rx, np.pi/2, self.radius)
-                    else:
-                        rxCar = rx
-                    d = point2plane(rxCar, normalCar)
-                    phaseShift = d * 3e8 / self.freq * np.pi * 2
-                    if (np.dot(rxCar, normalCar)) > 0:
-                        phaseShift = -phaseShift
-                    if k == 0:
-                        phaseShiftZero = phaseShift
-                    a[k] = np.exp(1j*(phaseShift - phaseShiftZero))
+            A_t.append(a)
+        A.append(np.array(A_t))
+    return np.array(A)
 
-                A_t.append(a)
-            A.append(A_t)
 
+def rotorMUSIC(thetaRes=180, phiRes=45, rxAngle=[-45, 45]):
+    arduino.reset()
+    arduino.gotoBoundAngle(rxAngle[0])
+    arduino.setSpeed(10)
+    # get signal X from all rxAngles
+    X = np.matrix(sdr.rx())
+    times = [time.time_ns()]
+    angles = [rxAngle[0], rxAngle[0]+180]
+    for angle in rxAngle[1:]:
+        arduino.gotoBoundAngle(angle)
+        X = np.concatenate((X, sdr.rx()))
+        times.append(time.time_ns)
+        angles.append(angle)
+        angles.append(angle+180)
+
+    # Shift all rx by their time of arrival
+    for t in times[1:]:
+        pass
+    # Generate all steering vectors
+
+def spinAquire(angleResolution=1, angleMin=-90, angleMax=90):
+    arduino.reset()
+    arduino.setMode(ad.BOUNDED)
+    arduino.gotoBoundAngle(angleMin)
+
+    try:
+        totalAngles = (angleMax - angleMin) // angleResolution
+        angles = np.linspace(angleMin, angleMax, totalAngles)
+        dfCaptures = np.zeros((2*totalAngles, num_samples), dtype=np.complex128)
+        dfAngles = np.concatenate((angles, angles + 180))
+        dfTimes = np.zeros(totalAngles, dtype=np.complex128)
+        for i, angle in enumerate(angles):
+            arduino.gotoBoundAngle(angle)
+            dfTimes[i] = time.time_ns()
+            rxData = sdr.rx()
+            dfCaptures[i] += rxData[0]
+            dfCaptures[i + totalAngles] += rxData[1]
+    except Exception as e:
+        print(e)
+    arduino.gotoBoundAngle(0)
+    dfTimes = np.concatenate((dfTimes, dfTimes))
+    dfTimes -= np.min(dfTimes)
+    return dfCaptures, dfAngles, dfTimes
+
+
+def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
+    dfCaptures, dfAngles, dfTimes = spinAquire(angleResolution, angleMin, angleMax)
+    for i in range(dfCaptures.shape[0]):
+        dfCaptures[i] *= np.exp(-2j*np.pi * rx_lo * (dfTimes[i]*10e-9))
+    A = genArrayA(np.linspace(0,np.pi/2, dfResolution),
+                  np.linspace(0, 2*np.pi, 4*dfResolution),
+                  dfAngles)
+
+    dfCapturesStride = len(dfCaptures) // elementsPerGroup
+
+    power = np.zeros(A.shape[:2])
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            for k in range(dfCapturesStride):
+                # make covariance matrix using elements k, k+90, k+180, k+ 270
+                x = np.matrix(dfCaptures[[l*dfCapturesStride+k for l in range(elementsPerGroup)]])
+                R = x@x.H
+                if R.shape[0] != elementsPerGroup:
+                    print("need to swap x@x.H")
+                    return
+                Rinv = np.linalg.pinv(R)
+                # make weight matrix from A
+                s = np.matrix(A[i,j,[l*dfCapturesStride+k for l in range(elementsPerGroup)]]).T
+                # add power
+                power[i,j] += np.array(1/np.abs((s.H @ Rinv @ s))).squeeze()
+
+    return 10*np.log10(power/dfCapturesStride)
+            
 
 
 
@@ -270,6 +355,7 @@ def rotorDF(dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
     # init
     arduino.reset()
     arduino.setDirection(ad.CLOCKWISE)
+    arduino.setMode(ad.BOUNDED)
     # set to -90 to prep for rotation
     arduino.gotoBoundAngle(angleMin)
     arduino.setDirection(ad.WITTERSHINS)
@@ -288,6 +374,9 @@ def rotorDF(dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
         arduino.gotoBoundAngle(0)
         return np.array([0]), np.array([0])
 
-# angles, dfResults = rotorDF()
-# plotRect(angles, dfResults)
-# np.save('df_1_-90_90(2).npy', dfResults)
+if __name__ == "__main__":
+    print("here")
+    angles, dfResults = rotorDF()
+    plotRect(angles, dfResults)
+    np.save('df_1_-90_90(2).npy', dfResults)
+    sdr.tx_destroy_buffer()

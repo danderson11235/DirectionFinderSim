@@ -68,3 +68,16 @@ class SerialDevice:
         self.serial.write(bytes(f"z\n", 'utf-8'))
         self.cur_angle = int(self.serial.readline())
         return self.cur_angle
+
+    def setSpeed(self, speed:int) -> int:
+        self.serial.write(bytes(f"s {speed}\n", 'utf-8'))
+        self.cur_angle = int(self.serial.readline())
+        return self.cur_angle
+
+    def gotoBoundStepFast(self, step):
+        self.setMode(BOUNDED)
+        self.serial.write(bytes(f"step\n", 'utf-8'))
+        # self.cur_angle = int(self.serial.readline())
+        self.needsRead = 1
+        return self.cur_angle
+

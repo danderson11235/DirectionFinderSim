@@ -18,7 +18,8 @@ rx_gain1 = 40
 tx_lo_low = rx_lo_low
 tx_lo = rx_lo_low
 tx_lo_high = rx_lo_high
-tx_gain = -30
+tx_gain_0 = -30
+tx_gain_1 = -30
 fc0 = int(200e3)
 phase_cal = 0
 tracking_length = 1000
@@ -45,8 +46,8 @@ sdr._rxadc.set_kernel_buffers_count(1)   # set buffers to 1 (instead of the defa
 sdr.tx_rf_bandwidth = int(fc0*3)
 sdr.tx_lo = int(tx_lo_low)
 sdr.tx_cyclic_buffer = True
-sdr.tx_hardwaregain_chan0 = int(tx_gain)
-sdr.tx_hardwaregain_chan1 = int(tx_gain)
+sdr.tx_hardwaregain_chan0 = int(tx_gain_0)
+sdr.tx_hardwaregain_chan1 = int(tx_gain_1)
 sdr.tx_buffer_size = int(2**18)
 
 '''Program Tx and Send Data'''
@@ -56,8 +57,8 @@ ts = 1 / float(fs)
 t = np.arange(0, N * ts, ts)
 i0 = np.cos(2 * np.pi * t * fc0) * 2 ** 14
 q0 = np.sin(2 * np.pi * t * fc0) * 2 ** 14
-i1 = np.cos(2 * np.pi * t * .95* fc0) * 2 ** 14
-q1 = np.sin(2 * np.pi * t * .95* fc0) * 2 ** 14
+i1 = np.cos(2 * np.pi * t * .9 * fc0) * 2 ** 14
+q1 = np.sin(2 * np.pi * t * .9 * fc0) * 2 ** 14
 iq0 = i0 + 1j * q0
 iq1 = i1 + 1j * q1
 sdr.tx([iq0,iq1])  # Send Tx data.
@@ -258,7 +259,7 @@ def genArrayA(thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
             for k, rx in enumerate(rxPos):
                 # First calculate the distance from the impart plane to the rx
                 if type(rx) is not np.ndarray:
-                    rxCar = spherical2cartesian(rx, np.pi/2, wavelength/4)
+                    rxCar = spherical2cartesian(rx, np.pi/2, d_wavelength/4)
                 else:
                     rxCar = rx
                 d2plane = point2plane(rxCar, normalCar)
@@ -319,7 +320,7 @@ def spinAquire(angleResolution=1, angleMin=-90, angleMax=90):
     return dfCaptures, dfAngles, dfTimes
 
 
-def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90):
+def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90, angleMax=90, signals=2):
     dfCaptures, dfAngles, dfTimes = spinAquire(angleResolution, angleMin, angleMax)
     for i in range(dfCaptures.shape[0]):
         dfCaptures[i] *= np.exp(-2j*np.pi * rx_lo * (dfTimes[i]*10e-9))
@@ -330,22 +331,31 @@ def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90,
     dfCapturesStride = len(dfCaptures) // elementsPerGroup
 
     power = np.zeros(A.shape[:2])
-    for i in range(A.shape[0]):
-        for j in range(A.shape[1]):
-            for k in range(dfCapturesStride):
+    music = np.zeros(A.shape[:2])
+    for k in range(dfCapturesStride):
+        x = np.matrix(dfCaptures[[l*dfCapturesStride+k for l in range(elementsPerGroup)]])
+        R = x@x.H
+        if R.shape[0] != elementsPerGroup:
+            print("need to swap x@x.H")
+            return
+        Rinv = np.linalg.pinv(R)
+        w,v = np.linalg.eig(R)
+        eig_order = np.argsort(np.abs(w))
+        v = v[:, eig_order]
+        V = np.matrix(np.zeros((elementsPerGroup, elementsPerGroup-signals), dtype=np.complex128))
+        for i in range(elementsPerGroup-signals):
+            V[:,i] = v[:,i]
+
+        for i in range(A.shape[0]):
+            for j in range(A.shape[1]):
                 # make covariance matrix using elements k, k+90, k+180, k+ 270
-                x = np.matrix(dfCaptures[[l*dfCapturesStride+k for l in range(elementsPerGroup)]])
-                R = x@x.H
-                if R.shape[0] != elementsPerGroup:
-                    print("need to swap x@x.H")
-                    return
-                Rinv = np.linalg.pinv(R)
                 # make weight matrix from A
                 s = np.matrix(A[i,j,[l*dfCapturesStride+k for l in range(elementsPerGroup)]]).T
                 # add power
                 power[i,j] += np.array(1/np.abs((s.H @ Rinv @ s))).squeeze()
+                music[i,j] += np.array(1/np.abs(s.H @ V @ V.H @ s)).squeeze()
 
-    return 10*np.log10(power/dfCapturesStride)
+    return power, music
             
 
 

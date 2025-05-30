@@ -7,4 +7,3 @@ sklearn-venv/bin/jupyter-troubleshoot
 models/__pycache__/BeamGen.cpython-311.pyc
 tmp/
 *.pyc
-*.npy

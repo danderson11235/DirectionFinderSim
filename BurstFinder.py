@@ -372,7 +372,7 @@ def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90,
                 power[i,j] += np.array(1/np.abs((s.H @ Rinv @ s))).squeeze()
                 music[i,j] += np.array(1/np.abs(s.H @ V @ V.H @ s)).squeeze()
 
-    return power, music
+    return power, music, dfCaptures, dfAngles, dfTimes
             
 
 

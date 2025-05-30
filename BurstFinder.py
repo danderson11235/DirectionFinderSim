@@ -27,6 +27,7 @@ tracking_length = 1000
 rx_phase_offset1 = 52.9170966 * np.pi / 180.0
 
 d_wavelength = 0.0625 # Distance between elements in meters
+radius = .0625
 wavelength = 3E8/rx_lo              # wavelength of the RF carrier
 d = d_wavelength*wavelength         # distance between elements in meters
 
@@ -43,6 +44,7 @@ sdr.rx_hardwaregain_chan0 = int(rx_gain0)
 sdr.rx_hardwaregain_chan1 = int(rx_gain1)
 sdr.rx_buffer_size = int(num_samples)
 sdr._rxadc.set_kernel_buffers_count(1)   # set buffers to 1 (instead of the default 4) to avoid stale data on Pluto
+sdr.tx_enabled_channels = [0,1]
 sdr.tx_rf_bandwidth = int(fc0*3)
 sdr.tx_lo = int(tx_lo_low)
 sdr.tx_cyclic_buffer = True
@@ -57,8 +59,8 @@ ts = 1 / float(fs)
 t = np.arange(0, N * ts, ts)
 i0 = np.cos(2 * np.pi * t * fc0) * 2 ** 14
 q0 = np.sin(2 * np.pi * t * fc0) * 2 ** 14
-i1 = np.cos(2 * np.pi * t * .9 * fc0) * 2 ** 14
-q1 = np.sin(2 * np.pi * t * .9 * fc0) * 2 ** 14
+i1 = np.cos(2 * np.pi * t * 1.5 * fc0) * 2 ** 14
+q1 = np.sin(2 * np.pi * t * 1.5 * fc0) * 2 ** 14
 iq0 = i0 + 1j * q0
 iq1 = i1 + 1j * q1
 sdr.tx([iq0,iq1])  # Send Tx data.
@@ -188,9 +190,9 @@ def plotRect(angles, results):
     plt.imshow(results)
     plt.show()
 
-def plot3D(angles, results):
-    x = np.linspace(angles[0], angles[1], results.shape[0])
-    y = np.linspace(angles[2], angles[3], results.shape[1])
+def plot3D(results):
+    x = np.arange(results.shape[0])
+    y = np.arange(results.shape[1])
     x,y = np.meshgrid(x,y)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -259,7 +261,7 @@ def genArrayA(thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
             for k, rx in enumerate(rxPos):
                 # First calculate the distance from the impart plane to the rx
                 if type(rx) is not np.ndarray:
-                    rxCar = spherical2cartesian(rx, np.pi/2, d_wavelength/4)
+                    rxCar = spherical2cartesian(rx, np.pi/2, wavelength/4)
                 else:
                     rxCar = rx
                 d2plane = point2plane(rxCar, normalCar)
@@ -273,6 +275,21 @@ def genArrayA(thetas:np.ndarray, phis:np.ndarray, rxPos:np.ndarray):
             A_t.append(a)
         A.append(np.array(A_t))
     return np.array(A)
+
+def genArrayA2(thetas, phis, rxPos):
+    if np.max(rxPos) > 3*np.pi:
+        rxPos *= (np.pi/180.0)
+    A = []
+    for i, theta in enumerate(thetas):
+        A_t = []
+        for j, phi in enumerate(phis):
+            a = np.zeros(rxPos.shape, dtype=np.complex128)
+            for k, rx in enumerate(rxPos):
+                a[k] = np.exp(2j*np.pi*(radius/wavelength) *np.sin(theta)*np.cos(phi-(2*np.pi*k/len(rxPos))))
+            A_t.append(a)
+        A.append(np.array(A_t))
+    return np.array(A)
+
 
 
 def rotorMUSIC(thetaRes=180, phiRes=45, rxAngle=[-45, 45]):
@@ -311,7 +328,7 @@ def spinAquire(angleResolution=1, angleMin=-90, angleMax=90):
             dfTimes[i] = time.time_ns()
             rxData = sdr.rx()
             dfCaptures[i] += rxData[0]
-            dfCaptures[i + totalAngles] += rxData[1]
+            dfCaptures[i + totalAngles] += rxData[1] * np.exp(1j*rx_phase_offset1)
     except Exception as e:
         print(e)
     arduino.gotoBoundAngle(0)
@@ -324,7 +341,7 @@ def spinDF(elementsPerGroup=4, dfResolution=90, angleResolution=1, angleMin=-90,
     dfCaptures, dfAngles, dfTimes = spinAquire(angleResolution, angleMin, angleMax)
     for i in range(dfCaptures.shape[0]):
         dfCaptures[i] *= np.exp(-2j*np.pi * rx_lo * (dfTimes[i]*10e-9))
-    A = genArrayA(np.linspace(0,np.pi/2, dfResolution),
+    A = genArrayA2(np.linspace(0,np.pi/2, dfResolution),
                   np.linspace(0, 2*np.pi, 4*dfResolution),
                   dfAngles)
 
